@@ -2,6 +2,9 @@ import sys
 import hashlib
 import os
 
+from io import BytesIO
+from PIL import Image, ImageDraw
+
 from django.conf import settings
 
 DEBUG = os.environ.get('DEBUG', 'on') == 'on'
@@ -34,25 +37,17 @@ settings.configure(
         os.path.join(BASE_DIR, 'static'),
     ),
     STATIC_URL='/static/',
-
-    # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-    #STATIC_ROOT = os.path.join(BASE_DIR, '../static'),
-    #DATABASES={
-    #    'default': {
-    #        'ENGINE': 'django.db.backends.sqlite3',
-    #    }
-    #},
 )
 
 
 from django import forms
 from django.conf.urls import url
 from django.core.cache import cache
+from django.core.urlresolvers import reverse
 from django.core.wsgi import get_wsgi_application
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import render
 from django.views.decorators.http import etag
-from io import BytesIO
-from PIL import Image, ImageDraw
 
 
 class ImageForm(forms.Form):
@@ -98,12 +93,13 @@ def placeholder(request, width, height):
 
 
 def index(request):
-    return HttpResponse('Hello World!')
-
+    example = reverse('placeholder', kwargs={'width': 50, 'height': 50})
+    context = {'example': request.build_absolute_uri(example)}
+    return render(request, 'home.html', context)
 
 
 urlpatterns = (
-    url(r'^image/(?P<width>[0-9]+)x(?P<height>[0-9]+)/$', placeholder,
+    url(r'^placeholder/(?P<width>[0-9]+)x(?P<height>[0-9]+)/$', placeholder,
         name='placeholder'),
     url(r'^$', index, name='homepage'),
 )
