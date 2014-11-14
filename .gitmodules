@@ -1,0 +1,3 @@
+[submodule "HelloDjango"]
+	path = HelloDjango
+	url = git@github.com:poolbath1/Lightweight_Django-HelloDjango.git
