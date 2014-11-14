@@ -10,6 +10,8 @@ SECRET_KEY = os.environ.get(
     'SECRET_KEY', 'thp%ag=d!6wkp$%u+kdh#g*ecs-@o4!nx^kv0z3-j6l($y#sq$'
 )
 
+BASE_DIR = os.path.dirname(__file__)
+
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
 
 settings.configure(
@@ -22,15 +24,24 @@ settings.configure(
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
     ),
-    # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-    #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    INSTALLED_APPS=(
+        'django.contrib.staticfiles',
+    ),
+    TEMPLATE_DIRS=(
+        os.path.join(BASE_DIR, 'templates'),
+    ),
+    STATICFILES_DIRS=(
+        os.path.join(BASE_DIR, 'static'),
+    ),
     STATIC_URL='/static/',
+
+    # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
     #STATIC_ROOT = os.path.join(BASE_DIR, '../static'),
-    DATABASES={
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-        }
-    },
+    #DATABASES={
+    #    'default': {
+    #        'ENGINE': 'django.db.backends.sqlite3',
+    #    }
+    #},
 )
 
 
