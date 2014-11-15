@@ -29,14 +29,17 @@ class Command(BaseCommand):
             if invalid:
                 msg = 'Invalid pages: {}'.format(', '.join(invalid))
                 raise CommandError(msg)
+        else:
+            pages = get_pages()
+            if os.path.exists(settings.SITE_OUTPUT_DIRECTORY):
+                shutil.rmtree(settings.SITE_OUTPUT_DIRECTORY)
+            os.mkdir(settings.SITE_OUTPUT_DIRECTORY)
+            os.makedirs(settings.STATIC_ROOT)
 
-        if os.path.exists(settings.SITE_OUTPUT_DIRECTORY):
-            shutil.rmtree(settings.SITE_OUTPUT_DIRECTORY)
-        os.mkdir(settings.SITE_OUTPUT_DIRECTORY)
-        os.makedirs(settings.STATIC_ROOT)
         call_command('collectstatic', interactive=False,
                      clear=True, verbosity=0)
         client = Client()
+
         for page in get_pages():
             url = reverse('page', kwargs={'slug': page})
             response = client.get(url)
@@ -44,6 +47,7 @@ class Command(BaseCommand):
                 output_dir = settings.SITE_OUTPUT_DIRECTORY
             else:
                 output_dir = os.path.join(settings.SITE_OUTPUT_DIRECTORY, page)
-                os.makedirs(output_dir)
+                if not os.path.exists(output_dir):
+                    os.makedirs(output_dir)
             with open(os.path.join(output_dir, 'index.html'), 'wb') as f:
                 f.write(response.content)
