@@ -2,3 +2,6 @@ env
 venv
 __pycache__
 _build
+error_output.html
+sandboxin/serializers from book.py
+*.pyc

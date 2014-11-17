@@ -18,7 +18,7 @@ class SprintSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sprint
-        fields = ('id', 'name', 'description', 'end', 'links')
+        fields = ('id', 'name', 'description', 'end', 'links', )
 
     def get_links(self, obj):
         request = self.context['request']
@@ -85,8 +85,9 @@ class TaskSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(msg)
         else:
             if sprint and sprint.end < date.today():
-                msg = _('Cannot ad tasks to past sprints.')
+                msg = _('Cannot add tasks to past sprints.')
                 raise serializers.ValidationError(msg)
+        return attrs
 
     def validate(self, attrs):
         sprint = attrs.get('sprint')
