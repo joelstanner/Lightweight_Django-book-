@@ -26,7 +26,7 @@
         showErrors: function (errors) {
             _.map(errors, function (fieldErrors, name) {
                 var field = $(':input[name=' + name + ']', this.form),
-                    label = $(':label[for=' + field.attr('id') + ']', this.form);
+                    label = $('label[for=' + field.attr('id') + ']', this.form);
                 if (label.length === 0) {
                     label = $('label', this.form).first();
                 }
@@ -73,7 +73,7 @@
             data = this.serializeForm(this.form);
             $.post(app.apiLogin, data)
                 .success($.proxy(this.loginSuccess, this))
-                .fail($.proxy(this.loginFailure, this));
+                .fail($.proxy(this.failure, this));
         },
         loginSuccess: function (data) {
             app.session.save(data.token);
