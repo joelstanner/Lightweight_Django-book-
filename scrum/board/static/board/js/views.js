@@ -101,7 +101,7 @@
                 var end = new Date();
                 end.setDate(end.getDate() - 7);
                 end = end.toISOString().replace(/T.*/g, '');
-                api.sprints.fetch({
+                app.sprints.fetch({
                     data: {end_min: end},
                     success: $.proxy(self.render, self)
                 });
@@ -164,11 +164,13 @@
             this.sprintId = options.sprintId;
             this.sprint = null;
             app.collections.ready.done(function () {
-                self.sprint = app.sprints.push({id: self.sprintId});
-                self.sprint.fetch({
-                    success: function () {
-                        self.render();
-                    }
+                app.sprints.getOrFetch(self.sprintId).done(function (sprint) {
+                    self.sprint = sprint;
+                    self.render();
+                }).fail(function (sprint) {
+                    self.sprint = sprint;
+                    self.sprint.invalid = true;
+                    self.render();
                 });
             });
         },
