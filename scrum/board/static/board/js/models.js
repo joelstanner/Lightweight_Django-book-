@@ -1,3 +1,5 @@
+/*global $, Backbone, _, app, jQuery */
+
 (function ($, Backbone, _, app) {
 
     // CSRF helper functions taken directly from Django docs
@@ -8,12 +10,12 @@
 
     function getCookie(name) {
         var cookieValue = null;
-        if (document.cookie && document.cookie != '') {
+        if (document.cookie && document.cookie !== '') {
             var cookies = document.cookie.split(';');
             for (var i = 0; i < cookies.length; i++) {
                 var cookie = $.trim(cookies[i]);
                 // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
                                     cookieValue = decodeURIComponent(
                                         cookie.substring(name.length + 1));
             break;
@@ -75,4 +77,49 @@
     });
 
     app.session = new Session();
+
+    var BaseModel = Backbone.Model.extend({
+        url: function () {
+            var links = this.get('links'),
+                url = links && links.self;
+            if (!url) {
+                url = Backbone.Model.prototype.url.call(this);
+            }
+            return url;
+        }
+    });
+
+    app.models.Sprint = BaseModel.extend({});
+    app.models.Task = BaseModel.extend({});
+    app.models.User = BaseModel.extend({
+        idAttributemodel: 'username'
+    });
+
+    var BaseCollection = Backbone.Collection.extend({
+        parse: function (response) {
+            this._next = response.next;
+            this._previous = response.previous;
+            this._count = response.count;
+            return response.results || [];
+        }
+    });
+
+    app.collections.ready = $.getJSON(app.apiRoot);
+    app.collections.ready.done(function (data) {
+        app.collections.Sprint = BaseCollection.extend({
+            model: app.models.Sprint,
+            url: data.sprints
+        });
+        app.sprints = new app.collections.Sprints();
+        app.collections.Tasks = BaseCollection.extend({
+            model: app.models.Task,
+            url: data.tasks
+        });
+        app.tasks = new app.collections.Tasks();
+        app.collections.Users = BaseCollection.extend({
+            model: app.models.User,
+            url: data.users
+        });
+        app.users = new app.collections.Users();
+    });
 })(jQuery, Backbone, _, app);
