@@ -89,8 +89,33 @@
         }
     });
 
-    app.models.Sprint = BaseModel.extend({});
-    app.models.Task = BaseModel.extend({});
+    app.models.Sprint = BaseModel.extend({
+        fetchTasks: function () {
+            var links = this.get('links');
+            if (links && links.tasks) {
+                app.tasks.fetch({url: links.tasks, remove: false});
+            }
+        }
+    });
+    app.models.Task = BaseModel.extend({
+        statusClass: function () {
+            var sprint = this.get('sprint'),
+                status;
+            if (!sprint) {
+                status = "unassigned";
+            } else {
+                status = ['todo', 'active', 'testing', 'done']
+                         [this.get('status') - 1];
+            }
+            return status;
+        },
+        inBacklog: function () {
+            return !this.get('sprint');
+        },
+        inSprint: function (sprint) {
+            return sprint.get('id') == this.get('sprint');
+        }
+    });
     app.models.User = BaseModel.extend({
         idAttributemodel: 'username'
     });
@@ -129,11 +154,16 @@
             url: data.sprints
         });
         app.sprints = new app.collections.Sprints();
+
         app.collections.Tasks = BaseCollection.extend({
             model: app.models.Task,
-            url: data.tasks
+            url: data.tasks,
+            getBacklog: function () {
+                this.fetch({remove: false, data: {backlog: 'True'}});
+            }
         });
         app.tasks = new app.collections.Tasks();
+
         app.collections.Users = BaseCollection.extend({
             model: app.models.User,
             url: data.users
