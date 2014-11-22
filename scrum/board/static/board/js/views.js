@@ -155,7 +155,7 @@
         }
     });
 
-    var AddTaskview = FormView.extend({
+    var AddTaskView = FormView.extend({
         templateName: '#new-task-template',
         submit: function (event) {
             var self = this,
@@ -201,6 +201,28 @@
             view.on('done', function () {
                 link.show();
             });
+        },
+        addTask: function (view) {
+            $('.list', this.$el).append(view.el);
+        }
+    });
+
+    var TaskItemView = TemplateView.extend({
+        tagName: 'div',
+        className: 'task-item',
+        templateName: '#task-item-template',
+        initialize: function (options) {
+            TemplateView.prototype.initialize.apply(this, arguments);
+            this.task = options.task;
+            this.task.on('change', this.render, this);
+            this.task.on('remove', this.remove, this);
+        },
+        getContext: function () {
+            return {task: this.task};
+        },
+        render: function () {
+            TemplateView.prototype.render.apply(this, arguments);
+            this.$el.css('order', this.task.get('order'));
         }
     });
 
@@ -267,7 +289,7 @@
                 container = this.statuses[column],
                 html = _.template(
                             '<div><%- task.get("name") %></div>', {task: task});
-            $('.list', continer.$el).append(html);
+            $('.list', container.$el).append(html);
         }
     });
 
