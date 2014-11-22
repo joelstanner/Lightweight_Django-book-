@@ -18,7 +18,8 @@
 
     var FormView = TemplateView.extend({
         events: {
-            'submit form': 'submit'
+            'submit form': 'submit',
+            'click button.cancel': 'done'
         },
         errorTemplate: _.template('<span class="error"><%- msg %></span>'),
         clearErrors: function () {
@@ -68,9 +69,6 @@
     var NewSprintView = FormView.extend({
         templateName: '#new-sprint-template',
         className: 'new-sprint',
-        events: _.extend({
-            'click button.cancel': 'done',
-        }, FormView.prototype.events),
         submit: function (event) {
             var self = this,
                 attributes = {};
@@ -157,10 +155,33 @@
         }
     });
 
+    var AddTaskview = FormView.extend({
+        templateName: '#new-task-template',
+        submit: function (event) {
+            var self = this,
+                attributes = {};
+            FormView.prototype.submit.apply(this, argument);
+            attributes = this.serializeForm(this.form);
+            app.collections.ready.done(function () {
+                app.tasks.create(attributes, {
+                    wait: true,
+                    success: $.proxy(self.success, self),
+                    error: $.proxy(self.modelFalure, self)
+                });
+            });
+        },
+        success: function (model, resp, options) {
+            this.done();
+        }
+    });
+
     var StatusView = TemplateView.extend({
         tagName: 'section',
         className: 'status',
         templateName: '#status-template',
+        events: {
+            'click button.add': 'renderAddForm'
+        },
         initialize: function (options) {
             TemplateView.prototype.initialize.apply(this, arguments);
             this.sprint = options.sprint;
@@ -169,6 +190,17 @@
         },
         getContext: function () {
             return {sprint: this.sprint, title: this.title};
+        },
+        renderAddForm: function (event) {
+            var view = new AddTaskView(),
+                link = $(event.currentTarget);
+            event.preventDefault();
+            link.before(view.el);
+            link.hide();
+            view.render();
+            view.on('done', function () {
+                link.show();
+            });
         }
     });
 
