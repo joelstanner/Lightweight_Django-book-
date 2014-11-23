@@ -207,10 +207,41 @@
         }
     });
 
+    var TaskDetailView = FormView.extend({
+        tagName: 'div',
+        className: 'task-detail',
+        templateName: '#task-detail-template',
+        initialize: function (options) {
+            FormView.prototype.initialize.apply(this, arguments);
+            this.task = options.task;
+            this.changes = {};
+            $('button.save', this.$el).hide();
+            this.task.on('change', this.render, this);
+            this.task.on('remove', this.remove, this);
+        },
+        getContext: function () {
+            return {task: this.task, empty: '-----'};
+        },
+        submit: function (event) {
+            FormView.prototype.submit.apply(this, arguments);
+            this.task.save(this.changes, {
+                wait: true,
+                success: $.proxy(this.modelFailure, this)
+            });
+        },
+        success: function (model) {
+            this.changes = {};
+            $('button.save', this.$el).hide();
+        }
+    });
+
     var TaskItemView = TemplateView.extend({
         tagName: 'div',
         className: 'task-item',
         templateName: '#task-item-template',
+        events: {
+            'click': 'details'
+        },
         initialize: function (options) {
             TemplateView.prototype.initialize.apply(this, arguments);
             this.task = options.task;
@@ -223,6 +254,15 @@
         render: function () {
             TemplateView.prototype.render.apply(this, arguments);
             this.$el.css('order', this.task.get('order'));
+        },
+        details: function () {
+            var view = new TaskDetailView({task: this.task});
+            this.$el.before(view.el);
+            this.$el.hide();
+            view.render();
+            view.on('done', function () {
+                this.$el.show();
+            }, this);
         }
     });
 
@@ -233,7 +273,7 @@
             TemplateView.prototype.initialize.apply(this, arguments);
             this.sprintId = options.sprintId;
             this.sprint = null;
-            this.tasks = [];
+            this.tasks = {};
             this.statuses = {
                 unassigned: new StatusView({
                     sprint: null, status: 1, title: 'Backlog'}),
@@ -274,22 +314,27 @@
                 view.delegateEvents();
                 view.render();
             }, this);
-            _.each(this.tasks, function (task) {
-                this.renderTask(task);
+            _.each(this.tasks, function (view, taskId) {
+                var task = app.tasks.get(taskId);
+                view.remove();
+                this.tasks[taskId] = this.renderTask(task);
             }, this);
         },
         addTask: function (task) {
             if (task.inBacklog() || task.inSprint(this.sprint)) {
-                this.tasks[task.get('id')] = task;
-                this.renderTask(task);
+                this.tasks[task.get('id')] = this.renderTask(task);
             }
         },
         renderTask: function(task) {
-            var column = task.statusClass(),
-                container = this.statuses[column],
-                html = _.template(
-                            '<div><%- task.get("name") %></div>', {task: task});
-            $('.list', container.$el).append(html);
+            var view = new TaskItemView({task: task});
+            _.each(this.statuses, function (container, name) {
+                if (container.sprint == task.get('sprint') &&
+                    container.status == task.get('status')) {
+                    container.addTask(view);
+                }
+            });
+            view.render();
+            return view;
         }
     });
 
