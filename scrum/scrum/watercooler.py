@@ -1,5 +1,10 @@
+import logging
+import signal
+import time
+
 from urllib.parse import urlparse
 
+from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.options import define, parse_command_line, options
 from tornado.web import Application
@@ -31,10 +36,24 @@ class SprintHandler(WebSocketHandler):
         """Remove subscription."""
 
 
+def shutdown(server):
+    ioloop = IOLoop.instance()
+    logging.info('Stopping server.')
+    server.stop()
+
+    def finalize():
+        ioloop.stop()
+        logging.info('Stopped.')
+
+    ioloop.add_timeout(time.time() + 1.5, finalize)
+
 if __name__ == '__main__':
     parse_command_line()
     application = Application([
         (r'/(?P<sprint>[0-9]+)', SprintHandler),
     ], debug=options.debug)
-    application.listen(options.port)
+    server = HTTPServer(application)
+    server.listen(options.port)
+    signal.signal(signal.SIGINT, lambda signal, frame: shutdown(server))
+    logging.info('Starting server on localhost:{}'.format(options.port))
     IOLoop.instance().start()
