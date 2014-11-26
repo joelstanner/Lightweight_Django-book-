@@ -2,6 +2,7 @@ import logging
 import signal
 import time
 
+from collections import defaultdict
 from urllib.parse import urlparse
 
 from tornado.httpserver import HTTPServer
@@ -36,6 +37,25 @@ class SprintHandler(WebSocketHandler):
         """Remove subscription."""
 
 
+class ScrumApplication(Application):
+
+    def __init__(self, **kwargs):
+        routes = [
+            (r'/(?P<sprint>[0-9]+)', SprintHandler),
+        ]
+        super().__init__(routes, **kwargs)
+        self.subscriptions = defaultdict(list)
+
+    def add_subscriber(self, channel, subscriber):
+        self.subscriptions[channel].append(subscriber)
+
+    def remove_subscriber(self, channel, subscriber):
+        self.subscriptions[channel].remove(subscriber)
+
+    def get_subscribers(self, channel):
+        return self.subscriptions[channel]
+
+
 def shutdown(server):
     ioloop = IOLoop.instance()
     logging.info('Stopping server.')
@@ -49,9 +69,7 @@ def shutdown(server):
 
 if __name__ == '__main__':
     parse_command_line()
-    application = Application([
-        (r'/(?P<sprint>[0-9]+)', SprintHandler),
-    ], debug=options.debug)
+    application = ScrumApplication(debug=options.debug)
     server = HTTPServer(application)
     server.listen(options.port)
     signal.signal(signal.SIGINT, lambda signal, frame: shutdown(server))
