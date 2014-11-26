@@ -9,7 +9,7 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.options import define, parse_command_line, options
 from tornado.web import Application
-from tornado.websocket import WebSocketHandler
+from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 
 define('debug', default=False, type=bool, help='Run in debug mode')
@@ -29,13 +29,16 @@ class SprintHandler(WebSocketHandler):
 
     def open(self, sprint):
         """Subscribe to sprint updates on a new connection."""
+        self.sprint = sprint
+        self.application.add_subscriber(self.sprint, self)
 
     def on_message(self, message):
         """Broadcast updates to other interested clients."""
+        self.application.broadcast(message, channel=self.sprint, sender=self)
 
     def on_close(self):
         """Remove subscription."""
-
+        self.application.remove_subscriber(self.sprint, self)
 
 class ScrumApplication(Application):
 
@@ -55,6 +58,19 @@ class ScrumApplication(Application):
     def get_subscribers(self, channel):
         return self.subscriptions[channel]
 
+    def broadcast(self, message, channel=None, sender=None):
+        if channel is None:
+            for c in self.subscriptions.keys():
+                self.broadcast(message, channel=c, sender=sender)
+        else:
+            peers = self.get_subscribers(channel)
+            for peer in peers:
+                if peer != sender:
+                    try:
+                        peer.write_message(message)
+                    except WebSocketClosedError:
+                        # Remove dead peer
+                        self.remove_subscriber(channel, peer)
 
 def shutdown(server):
     ioloop = IOLoop.instance()
