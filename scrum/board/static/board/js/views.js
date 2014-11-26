@@ -160,13 +160,13 @@
         submit: function (event) {
             var self = this,
                 attributes = {};
-            FormView.prototype.submit.apply(this, argument);
+            FormView.prototype.submit.apply(this, arguments);
             attributes = this.serializeForm(this.form);
             app.collections.ready.done(function () {
                 app.tasks.create(attributes, {
                     wait: true,
                     success: $.proxy(self.success, self),
-                    error: $.proxy(self.modelFalure, self)
+                    error: $.proxy(self.modelFailure, self)
                 });
             });
         },
@@ -211,6 +211,9 @@
         tagName: 'div',
         className: 'task-detail',
         templateName: '#task-detail-template',
+        events: _.extend({
+            'blur [data-field][contenteditable=true]': 'editField'
+        }, FormView.prototype.events),
         initialize: function (options) {
             FormView.prototype.initialize.apply(this, arguments);
             this.task = options.task;
@@ -226,12 +229,38 @@
             FormView.prototype.submit.apply(this, arguments);
             this.task.save(this.changes, {
                 wait: true,
-                success: $.proxy(this.modelFailure, this)
+                success: $.proxy(this.success, this),
+                error: $.proxy(this.modelFailure, this)
             });
         },
         success: function (model) {
             this.changes = {};
             $('button.save', this.$el).hide();
+        },
+        editField: function (event) {
+            var $this = $(event.currentTarget),
+                value = $this.text().replace(/^\s+|\s+$/g,''),
+                field = $this.data('field');
+            this.changes[field] = value;
+            $('button.save', this.$el).show();
+        },
+        showErrors: function (errors) {
+            _.map(errors, function (fieldErrors, name) {
+                var field = $('[data-field=' + name + ']', this.$el);
+                if (field.length === 0) {
+                    field = $('[data-field]', this.$el).first();
+                }
+                function appendError(msg) {
+                    var parent = field.parent('.with-label'),
+                        error = this.errorTemplate({msg: msg});
+                    if (parent.length === 0) {
+                        field.before(error);
+                    } else {
+                        parent.before(error);
+                    }
+                }
+                _.map(fieldErrors, appendError, this);
+            }, this);
         }
     });
 
@@ -284,7 +313,7 @@
                 testing: new StatusView({
                     sprint: this.sprintId, status: 3, title: 'In Testing'}),
                 done: new StatusView({
-                    sprint: this.sprintId, status: 4, title: 'Completed'}),
+                    sprint: this.sprintId, status: 4, title: 'Completed'})
             };
             app.collections.ready.done(function () {
                 app.tasks.on('add', self.addTask, self);
@@ -325,7 +354,7 @@
                 this.tasks[task.get('id')] = this.renderTask(task);
             }
         },
-        renderTask: function(task) {
+        renderTask: function (task) {
             var view = new TaskItemView({task: task});
             _.each(this.statuses, function (container, name) {
                 if (container.sprint == task.get('sprint') &&
