@@ -123,8 +123,12 @@ header nav a:hover {
 .tasks {
     display: -webkit-box;
     display: -moz-box;
-    display: -ms-flexbox; display: -webkit-flex; display: flex;
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+
     -webkit-flex-flow: row wrap;
+
     align-items: strech;
     overflow: scroll;
 }
@@ -143,6 +147,7 @@ header nav a:hover {
     display: -ms-flexbox;
     display: -webkit-flex;
     display: flex;
+
     -webkit-flex-flow: row wrap;
     flex-direction: row;
     justify-content: space-around;
@@ -157,6 +162,24 @@ header nav a:hover {
     margin: 5px 0;
     padding: 3px;
 }
+
+[draggable=true] {
+    cursor: move;
+}
+
+.tasks .task-item.over {
+    opacity: 0.5;
+    border: 1px black dotted;
+}
+
+.tasks .status.over {
+    border: 1px black dotted;
+}
+
+.task .task-item.locked {
+    opacity: 0.5;
+}
+
 /* Task Detail
  ==================== */
 .task-detail {
@@ -188,17 +211,4 @@ header nav a:hover {
 
 [contenteditable=true]:focus {
     background: #FFF;
-}
-
-[draggable=true] {
-    cursor: move;
-}
-
-.tasks .task-item.over {
-    opacity: 0.5;
-    border: 1px black dotted;
-}
-
-.tasks .status.over {
-    border: 1px black dotted;
 }

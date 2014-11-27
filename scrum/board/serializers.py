@@ -30,7 +30,7 @@ class SprintSerializer(serializers.ModelSerializer):
                              request=request) + '?sprint={}'.format(obj.pk),
             'channel': '{proto}://{server}/{channel}'.format(
                 proto='wss' if settings.WATERCOOLER_SECURE else 'ws',
-                server=serttings.WATERCOOLER_SERVER,
+                server=settings.WATERCOOLER_SERVER,
                 channel=obj.pk
             ),
         }
