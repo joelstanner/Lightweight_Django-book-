@@ -13,7 +13,7 @@ from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 
 define('debug', default=False, type=bool, help='Run in debug mode')
-define('port', default=8080, type=int, help='Server Port')
+define('port', default=8080, type=int, help='Server port')
 define('allowed_hosts', default="localhost:8080", multiple=True,
        help='Allowed hosts for cross domain connections')
 
@@ -88,6 +88,6 @@ if __name__ == '__main__':
     application = ScrumApplication(debug=options.debug)
     server = HTTPServer(application)
     server.listen(options.port)
-    signal.signal(signal.SIGINT, lambda signal, frame: shutdown(server))
+    signal.signal(signal.SIGINT, lambda sig, frame: shutdown(server))
     logging.info('Starting server on localhost:{}'.format(options.port))
     IOLoop.instance().start()
