@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 
@@ -27,6 +28,11 @@ class SprintSerializer(serializers.ModelSerializer):
                             request=request),
             'tasks': reverse('task-list',
                              request=request) + '?sprint={}'.format(obj.pk),
+            'channel': '{proto}://{server}/{channel}'.format(
+                proto='wss' if settings.WATERCOOLER_SECURE else 'ws',
+                server=serttings.WATERCOOLER_SERVER,
+                channel=obj.pk
+            ),
         }
 
     def validate_end(self, attrs, source):
@@ -104,6 +110,7 @@ class TaskSerializer(serializers.ModelSerializer):
             msg = _('Completed date cannot be set for uncompleted tasks.')
             raise serializers.ValidationError(msg)
         return attrs
+
 
 class UserSerializer(serializers.ModelSerializer):
 
