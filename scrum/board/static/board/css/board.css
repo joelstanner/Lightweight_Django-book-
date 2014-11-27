@@ -198,3 +198,7 @@ header nav a:hover {
     opacity: 0.5;
     border: 1px black dotted;
 }
+
+.tasks .status.over {
+    border: 1px black dotted;
+}

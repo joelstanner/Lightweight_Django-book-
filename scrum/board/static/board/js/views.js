@@ -180,7 +180,11 @@
         className: 'status',
         templateName: '#status-template',
         events: {
-            'click button.add': 'renderAddForm'
+            'click button.add': 'renderAddForm',
+            'dragenter': 'enter',
+            'dragover': 'over',
+            'dragleave': 'leave',
+            'drop': 'drop'
         },
         initialize: function (options) {
             TemplateView.prototype.initialize.apply(this, arguments);
@@ -204,6 +208,29 @@
         },
         addTask: function (view) {
             $('.list', this.$el).append(view.el);
+        },
+        enter: function (event) {
+            event.originalEvent.dataTransfer.effectAllowed = 'move';
+            event.preventDefault();
+            this.$el.addClass('over');
+        },
+        over: function (event) {
+            event.originalEvent.dataTransfer.dropEffect = 'move';
+            event.preventDefault();
+            return false;
+        },
+        leave: function (event) {
+            this.$el.removeClass('over');
+        },
+        drop: function (event) {
+            var dataTransfer = event.originalEvent.dataTransfer,
+                task = dataTransfer.getData('application/model');
+            if (event.stopPropagation) {
+                event.stopPropagation();
+            }
+            // TODO: Hendle changing the task status.
+            this.trigger('drop', task);
+            this.leave();
         }
     });
 
