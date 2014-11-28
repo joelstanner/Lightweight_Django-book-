@@ -40,6 +40,7 @@ class SprintHandler(WebSocketHandler):
         """Remove subscription."""
         self.application.remove_subscriber(self.sprint, self)
 
+
 class ScrumApplication(Application):
 
     def __init__(self, **kwargs):
@@ -71,6 +72,7 @@ class ScrumApplication(Application):
                     except WebSocketClosedError:
                         # Remove dead peer
                         self.remove_subscriber(channel, peer)
+
 
 def shutdown(server):
     ioloop = IOLoop.instance()

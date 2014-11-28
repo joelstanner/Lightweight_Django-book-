@@ -302,36 +302,6 @@
     });
 
     var TaskItemView = TemplateView.extend({
-        drop: function (event) {
-            var self = this,
-                dataTransfer = event.originalEvent.dataTransfer,
-                task = dataTransfer.getData('application/model'),
-                tasks, order;
-            if (event.stopPropagation) {
-                event.stopPropagation();
-            }
-            task = app.tasks.get(task);
-            if (task !== this.task) {
-                // Task is being moved in front of this.task
-                order = this.task.get('order');
-                tasks = app.tasks.filter(function (model) {
-                    return model.get('id') !== task.get('id') &&
-                        model.get('status') === self.task.get('status') &&
-                        model.get('sprint') === self.task.get('sprint') &&
-                        model.get('order') >= order;
-                });
-                _.each(tasks, function (model, i) {
-                    model.save({order: order + (i + 1)});
-                });
-                task.moveTo(
-                    this.task.get('status'),
-                    this.task.get('sprint'),
-                    order);
-            }
-            this.trigger('drop', task);
-            this.leave();
-            return false;
-        },
         tagName: 'div',
         className: 'task-item',
         templateName: '#task-item-template',
@@ -390,6 +360,36 @@
         },
         leave: function (event) {
             this.$el.removeClass('over');
+        },
+        drop: function (event) {
+            var self = this,
+                dataTransfer = event.originalEvent.dataTransfer,
+                task = dataTransfer.getData('application/model'),
+                tasks, order;
+            if (event.stopPropagation) {
+                event.stopPropagation();
+            }
+            task = app.tasks.get(task);
+            if (task !== this.task) {
+                // Task is being moved in front of this.task
+                order = this.task.get('order');
+                tasks = app.tasks.filter(function (model) {
+                    return model.get('id') !== task.get('id') &&
+                        model.get('status') === self.task.get('status') &&
+                        model.get('sprint') === self.task.get('sprint') &&
+                        model.get('order') >= order;
+                });
+                _.each(tasks, function (model, i) {
+                    model.save({order: order + (i + 1)});
+                });
+                task.moveTo(
+                    this.task.get('status'),
+                    this.task.get('sprint'),
+                    order);
+            }
+            this.trigger('drop', task);
+            this.leave();
+            return false;
         },
         lock: function () {
             this.$el.addClass('locked');
@@ -478,7 +478,6 @@
                     container.addTask(view);
                 }
             });
-            view.render();
             view.on('dragstart', function (model) {
                 this.socket.send({
                     model: 'task',
@@ -500,6 +499,7 @@
                     action: 'drop'
                 });
             }, this);
+            view.render();
             return view;
         },
         connectSocket: function () {

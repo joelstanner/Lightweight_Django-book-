@@ -59,11 +59,14 @@ header {
 }
 
 header .title {
-    font-weight: 900; padding-left: 25px;
+    font-weight: 900;
+    padding-left: 25px;
 }
 
 header nav {
-    display: inline-block; float: right; padding-right: 25px;
+    display: inline-block;
+    float: right;
+    padding-right: 25px;
 }
 
 header nav a {
@@ -176,7 +179,7 @@ header nav a:hover {
     border: 1px black dotted;
 }
 
-.task .task-item.locked {
+.tasks .task-item.locked {
     opacity: 0.5;
 }
 

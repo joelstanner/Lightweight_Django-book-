@@ -1,4 +1,4 @@
-(function ($, Backbone, _, app){
+(function ($, Backbone, _, app) {
 
     var Socket = function (server) {
         this.server = server;
