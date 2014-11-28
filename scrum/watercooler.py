@@ -6,17 +6,35 @@ import time
 from collections import defaultdict
 from urllib.parse import urlparse
 
+from redis import Redis
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.options import define, parse_command_line, options
 from tornado.web import Application, RequestHandler
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
+from tornadoredis import Client
+from tornadoredis.pubsib import BaseSubscriber
 
 
 define('debug', default=False, type=bool, help='Run in debug mode')
 define('port', default=8080, type=int, help='Server port')
 define('allowed_hosts', default="localhost:8080", multiple=True,
        help='Allowed hosts for cross domain connections')
+
+
+class RedisSubscriber(BaseSubscriber):
+
+    def on_message(self, msg):
+        """Handle new message on the Redis channel."""
+        if msg and msg.kind =='message':
+            subscribers = list(self.subscribers[msg.channel].keys())
+            for subscriber in subscribers:
+                try:
+                    subscriber.write_message(msg.body)
+                except tornado.websocket.WebSocketClosedError:
+                    # Remove dead peer
+                    self.unsubscribe(msg.channel, subscriber)
+        super().on_message(msg)
 
 
 class SprintHandler(WebSocketHandler):
@@ -54,7 +72,7 @@ class UpdateHandler(RequestHandler):
     def delete(self, model, pk):
         self._broadcast(model, pk, 'remove')
 
-    def broadcast(self, model, pk, action):
+    def _broadcast(self, model, pk, action):
         message = json.dumps({
             'model': model,
             'id': pk,
@@ -72,30 +90,19 @@ class ScrumApplication(Application):
             (r'/(?P<model>task|sprint|user)/(?P<pk>[0-9]+)', UpdateHandler),
         ]
         super().__init__(routes, **kwargs)
-        self.subscriptions = defaultdict(list)
+        self.subscriber = RedisSubscriber(Client())
+        self.publisher = Redis()
 
     def add_subscriber(self, channel, subscriber):
-        self.subscriptions[channel].append(subscriber)
+        self.subscriber.subscribe(['all', channel],subscriber)
 
     def remove_subscriber(self, channel, subscriber):
-        self.subscriptions[channel].remove(subscriber)
-
-    def get_subscribers(self, channel):
-        return self.subscriptions[channel]
+        self.subscriber.unsubscribe(channel, subscriber)
+        self.subscriber.unsubscribe('all', subscriber)
 
     def broadcast(self, message, channel=None, sender=None):
-        if channel is None:
-            for c in self.subscriptions.keys():
-                self.broadcast(message, channel=c, sender=sender)
-        else:
-            peers = self.get_subscribers(channel)
-            for peer in peers:
-                if peer != sender:
-                    try:
-                        peer.write_message(message)
-                    except WebSocketClosedError:
-                        # Remove dead peer
-                        self.remove_subscriber(channel, peer)
+        channel = 'all' if channel is None else channel
+        self.publisher.publish(channel, message)
 
 
 def shutdown(server):
