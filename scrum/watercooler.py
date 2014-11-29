@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import signal
 import time
 import uuid
@@ -7,6 +8,7 @@ import uuid
 from collections import defaultdict
 from urllib.parse import urlparse
 
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from redis import Redis
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -14,7 +16,7 @@ from tornado.options import define, parse_command_line, options
 from tornado.web import Application, RequestHandler
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornadoredis import Client
-from tornadoredis.pubsib import BaseSubscriber
+from tornadoredis.pubsub import BaseSubscriber
 
 
 define('debug', default=False, type=bool, help='Run in debug mode')
@@ -55,20 +57,33 @@ class SprintHandler(WebSocketHandler):
         matched = any(parsed.netloc == host for host in options.allowed_hosts)
         return options.debug or allowed or matched
 
-    def open(self, sprint):
+    def open(self):
         """Subscribe to sprint updates on a new connection."""
-        # TODO: Validate sprint
-        self.sprint = sprint.decode('utf-8')
-        self.uid = uuid.uuid4().hex
-        self.application.add_subscriber(self.sprint, self)
+        self.sprint = None
+        channel = self.get_argument('channel', None)
+        if not channel:
+            self.close()
+        else:
+            try:
+                self.sprint = self.application.signer.unsign(
+                    channel, max_age = 60 * 30)
+            except (BadSignature, SignatureExpired):
+                self.close()
+            else:
+                self.uid = uuid.uuid4().hex
+                self.application.add_subscriber(self.sprint, self)
+
 
     def on_message(self, message):
         """Broadcast updates to other interested clients."""
-        self.application.broadcast(message, channel=self.sprint, sender=self)
+        if self.sprint is not None:
+            self.application.broadcast(message, channel=self.sprint,
+                                       sender=self)
 
     def on_close(self):
         """Remove subscription."""
-        self.application.remove_subscriber(self.sprint, self)
+        if self.sprint is not None:
+            self.application.remove_subscriber(self.sprint, self)
 
 
 class UpdateHandler(RequestHandler):
@@ -97,12 +112,15 @@ class ScrumApplication(Application):
 
     def __init__(self, **kwargs):
         routes = [
-            (r'/(?P<sprint>[0-9]+)', SprintHandler),
+            (r'/socket', SprintHandler),
             (r'/(?P<model>task|sprint|user)/(?P<pk>[0-9]+)', UpdateHandler),
         ]
         super().__init__(routes, **kwargs)
         self.subscriber = RedisSubscriber(Client())
         self.publisher = Redis()
+        self._key = os.environ.get('WATERCOOLER_SECRET',
+                                   'pTyz1dzMeVUGrb0Su4QXsP984qTlvQRHpFnnlHuH')
+        self.signer = TimestampSigner(self._key)
 
     def add_subscriber(self, channel, subscriber):
         self.subscriber.subscribe(['all', channel],subscriber)
