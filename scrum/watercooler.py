@@ -2,6 +2,7 @@ import json
 import logging
 import signal
 import time
+import uuid
 
 from collections import defaultdict
 from urllib.parse import urlparse
@@ -27,13 +28,21 @@ class RedisSubscriber(BaseSubscriber):
     def on_message(self, msg):
         """Handle new message on the Redis channel."""
         if msg and msg.kind =='message':
+            try:
+                message = json.loads(msg.body)
+                sender = message['sender']
+                message = message['message']
+            except (ValueError, KeyError):
+                message = msg.body
+                sender = None
             subscribers = list(self.subscribers[msg.channel].keys())
             for subscriber in subscribers:
-                try:
-                    subscriber.write_message(msg.body)
-                except tornado.websocket.WebSocketClosedError:
-                    # Remove dead peer
-                    self.unsubscribe(msg.channel, subscriber)
+                if sender is None or sender != subscriber.uid:
+                    try:
+                        subscriber.write_message(message)
+                    except tornado.websocket.WebSocketClosedError:
+                        # Remove dead peer
+                        self.unsubscribe(msg.channel, subscriber)
         super().on_message(msg)
 
 
@@ -48,7 +57,9 @@ class SprintHandler(WebSocketHandler):
 
     def open(self, sprint):
         """Subscribe to sprint updates on a new connection."""
-        self.sprint = sprint
+        # TODO: Validate sprint
+        self.sprint = sprint.decode('utf-8')
+        self.uid = uuid.uuid4().hex
         self.application.add_subscriber(self.sprint, self)
 
     def on_message(self, message):
@@ -102,6 +113,10 @@ class ScrumApplication(Application):
 
     def broadcast(self, message, channel=None, sender=None):
         channel = 'all' if channel is None else channel
+        message = json.dumps({
+            'sender': sender and sender.uid,
+            'message': message
+        })
         self.publisher.publish(channel, message)
 
 
